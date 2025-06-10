@@ -3,8 +3,9 @@ package main
 import (
 	"OurNewBigProject/internal"
 	"OurNewBigProject/internal/ui"
+	"fmt"
+
 	"flag"
-	"log"
 )
 
 const (
@@ -18,10 +19,10 @@ func main() {
 	p := internal.NewProto(*name, Port)
 
 	runNetworkManager(p)
-	
-	if err := runUI(p); err != nil {
-		log.Fatal(err)
-	}
+
+	runUI(p)
+	var a string
+	fmt.Scan(&a)
 }
 
 func runNetworkManager(p *internal.Proto) {

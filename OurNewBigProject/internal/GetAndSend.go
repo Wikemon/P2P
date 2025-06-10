@@ -17,7 +17,7 @@ var (
 )
 
 const (
-	MulticastIP             = "224.0.0.1"
+	MulticastIP             = "192.168.1.156"
 	ListenerIP              = "0.0.0.0"
 	MulticastFrequency      = 1 * time.Second
 	udpConnectionBufferSize = 1024
