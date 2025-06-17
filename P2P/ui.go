@@ -51,9 +51,18 @@ func ui() {
 			return
 		}
 		historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, UserName, text))
+		Writer(UserName, text)
 		inputEntry.SetText("")
 		scrollContainer.ScrollToBottom()
 	}
+
+	go func() {
+		name, text := Listener()
+		if name == "" || text == "" || name == UserName {
+			return
+		}
+		historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, name, text))
+	}()
 
 	// Размещаем элементы в контейнерах
 	inputContainer := container.NewBorder(nil, nil, nil, nil, inputEntry)
@@ -61,4 +70,5 @@ func ui() {
 	// Устанавливаем содержимое окна и показываем его
 	myWindow.SetContent(content)
 	myWindow.ShowAndRun()
+	Listener()
 }

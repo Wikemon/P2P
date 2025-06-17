@@ -1,49 +1,59 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"net"
-	"os"
+	"strings"
 )
 
 func main() {
 	ui()
 }
 
-func Writer() {
+func Writer(name string, text string) {
 	conn, err := net.Dial("tcp", "192.168.1.156:4545")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	defer conn.Close()
-	var s string
-	fmt.Scan(&s)
-	conn.Write([]byte(s))
-	io.Copy(os.Stdout, conn)
-	fmt.Println("\nDone")
+	message := fmt.Sprintf("%s:%s\n", name, text)
+	_, err = conn.Write([]byte(message))
+	if err != nil {
+		fmt.Printf("Write error: %v\n", err)
+		return
+	}
+	fmt.Println("Message sent successfully")
 }
 
-func Listener() {
-	listener, err := net.Listen("tcp", ":4545")
-
+func Listener() (string, string) {
+	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
-		fmt.Println(err)
-		return
+		fmt.Println("Ошибка при запуске сервера:", err)
+		return "", ""
 	}
+	defer ln.Close()
 
-	defer listener.Close()
-	fmt.Println("Server is listening...")
-	conn, err := listener.Accept()
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Ошибка при принятии соединения:", err)
+			continue
+		}
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) (string, string) {
+	defer conn.Close()
+
+	message, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
-		fmt.Println(err)
-		return
+		fmt.Println("Ошибка при чтении:", err)
+		return "", ""
 	}
-	input := make([]byte, (1024 * 4))
-	n, err := conn.Read(input)
-	if n == 0 || err != nil {
-		fmt.Println("Read error:", err)
-	}
-	fmt.Println(string(input[:n]))
+	parts := strings.SplitN(string(message), ":", 2)
+	fmt.Println(parts)
+	return parts[0], parts[1]
 }
