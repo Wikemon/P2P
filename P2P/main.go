@@ -7,18 +7,23 @@ import (
 	"strings"
 )
 
+type pair struct {
+	Name string
+	Text string
+}
+
 func main() {
 	ui()
 }
 
 func Writer(name string, text string) {
-	conn, err := net.Dial("tcp", "192.168.1.156:4545")
+	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	defer conn.Close()
-	message := fmt.Sprintf("%s:%s\n", name, text)
+	message := fmt.Sprintf("%s:%s", name, text)
 	_, err = conn.Write([]byte(message))
 	if err != nil {
 		fmt.Printf("Write error: %v\n", err)
@@ -27,33 +32,38 @@ func Writer(name string, text string) {
 	fmt.Println("Message sent successfully")
 }
 
-func Listener() (string, string) {
-	ln, err := net.Listen("tcp", ":0")
+func Writing() ([]pair, error) {
+	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
-		fmt.Println("Ошибка при запуске сервера:", err)
-		return "", ""
+		fmt.Printf("Ошибка подключения: %v\n", err)
+		return nil, nil
 	}
-	defer ln.Close()
-
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			fmt.Println("Ошибка при принятии соединения:", err)
-			continue
-		}
-		go handleConnection(conn)
-	}
-}
-
-func handleConnection(conn net.Conn) (string, string) {
 	defer conn.Close()
-
-	message, err := bufio.NewReader(conn).ReadString('\n')
+	fmt.Println("Подключено к серверу")
+	_, err = conn.Write([]byte("Read\n"))
 	if err != nil {
-		fmt.Println("Ошибка при чтении:", err)
-		return "", ""
+		fmt.Printf("%v\n", err)
 	}
-	parts := strings.SplitN(string(message), ":", 2)
-	fmt.Println(parts)
-	return parts[0], parts[1]
+	messages := make([]pair, 0, 100000000)
+	//amount, err := bufio.NewReader(conn).ReadString('\n')
+	//fmt.Println(amount)
+	response, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	fmt.Println(string(response))
+	parts := strings.SplitN(string(response), " ", 4096)
+	for i := 0; i < len(parts); i++ {
+		if parts[i] == "\n" {
+			break
+		}
+		part := strings.SplitN(string(parts[i]), ":", 2)
+		messages = append(messages, pair{Name: part[0], Text: part[1]})
+	}
+	//if fmt.Sprintf("%v", len(messages)) != fmt.Sprintf("%v", string(amount)) {
+	//	return nil, fmt.Errorf("LOST OF INFO; TRY AGAIN")
+	//}
+	fmt.Println(messages)
+	return messages, nil
 }

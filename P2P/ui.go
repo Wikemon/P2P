@@ -6,6 +6,11 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"net"
+)
+
+var (
+	Conn, _ = net.Dial("tcp", "localhost:4545")
 )
 
 func ui() {
@@ -33,15 +38,30 @@ func ui() {
 	myWindow.Resize(fyne.NewSize(400, 400))
 
 	historyLabel := widget.NewLabel("")
-	historyLabel.Wrapping = fyne.TextWrapWord // Перенос слов
+	historyLabel.Wrapping = fyne.TextWrapWord
 
-	// Создаем контейнер с фиксированным размером и ползунком
 	scrollContainer := container.NewScroll(historyLabel)
 	scrollContainer.SetMinSize(fyne.NewSize(300, 360))
 	scrollContainer.ScrollToBottom()
 
 	inputEntry := widget.NewEntry()
 	inputEntry.SetPlaceHolder("Введите сообщение")
+
+	update := widget.NewButton("Появились сообщения", func() {
+		mas, err := Writing()
+		if err != nil {
+			historyLabel.SetText(fmt.Sprintf("%v", err))
+			return
+		}
+		if len(mas) == 0 {
+			return
+		} else {
+			historyLabel.SetText("")
+		}
+		for i := 0; i < len(mas); i++ {
+			historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, mas[i].Name, mas[i].Text))
+		}
+	})
 
 	inputEntry.OnSubmitted = func(text string) {
 		if UserName == "" {
@@ -56,19 +76,8 @@ func ui() {
 		scrollContainer.ScrollToBottom()
 	}
 
-	go func() {
-		name, text := Listener()
-		if name == "" || text == "" || name == UserName {
-			return
-		}
-		historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, name, text))
-	}()
-
-	// Размещаем элементы в контейнерах
-	inputContainer := container.NewBorder(nil, nil, nil, nil, inputEntry)
+	inputContainer := container.NewBorder(nil, nil, nil, update, inputEntry)
 	content := container.NewBorder(scrollContainer, inputContainer, nil, nil)
-	// Устанавливаем содержимое окна и показываем его
 	myWindow.SetContent(content)
 	myWindow.ShowAndRun()
-	Listener()
 }
