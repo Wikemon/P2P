@@ -13,6 +13,7 @@ type pair struct {
 }
 
 func main() {
+	fmt.Println("5252")
 	ui()
 }
 
