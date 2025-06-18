@@ -4,38 +4,197 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"net"
+	"image/color"
 )
 
-var (
-	Conn, _ = net.Dial("tcp", "localhost:4545")
-)
+type ChatTheme struct {
+	PanelColor  color.Color // Цвет боковой панели
+	ChatBgColor color.Color // Цвет фона чата
+	AvatarImage string      // Путь к изображению аватара
+}
 
 func ui() {
 	myApp := app.New()
 
+	nameWindow := myApp.NewWindow("welcome slay")
+	nameWindow.Resize(fyne.NewSize(400, 400))
+
+	bgImage := canvas.NewImageFromFile("images/fish.jpg")
+	bgImage.FillMode = canvas.ImageFillStretch
+
 	var UserName string
-	f := myApp.NewWindow("Name")
-	f.Resize(fyne.NewSize(300, 100))
 	entry := widget.NewEntry()
+	entry.SetPlaceHolder("Enter your SLAY NAME")
 
-	form := &widget.Form{
-		Items: []*widget.FormItem{
-			{Text: "Enter something", Widget: entry},
-		},
-		OnSubmit: func() {
-			UserName = entry.Text
-			f.Close()
-		},
+	submitBtn := createImageButton("images/horse.jpg", func() {
+		UserName = entry.Text
+		if UserName == "" {
+			UserName = "unnamed guy"
+		}
+		if UserName == "Oleg" {
+			UserName = "silly guy"
+		}
+		nameWindow.Close()
+		createChatWindow(myApp, UserName)
+	})
+
+	form := container.NewVBox(
+		entry,
+		container.NewCenter(submitBtn),
+		container.NewCenter(
+			canvas.NewText("(only SLAY NAME)!!!!!!!!or u will be kicked:", color.White),
+		),
+	)
+
+	nameWindow.SetContent(container.NewStack(
+		bgImage,
+		container.NewCenter(form),
+	))
+
+	nameWindow.Show()
+	myApp.Run()
+}
+
+func createImageButton(imagePath string, tapped func()) fyne.CanvasObject {
+	img := canvas.NewImageFromFile(imagePath)
+	img.SetMinSize(fyne.NewSize(150, 50))
+
+	btn := widget.NewButton("", tapped)
+	btn.Importance = widget.LowImportance
+	btn.Resize(fyne.NewSize(150, 50))
+
+	return container.NewStack(
+		img,
+		btn,
+	)
+}
+func roundedSquareButton(text string, bgColor color.Color, tapped func()) *fyne.Container {
+
+	bg := canvas.NewRectangle(bgColor)
+	bg.CornerRadius = 8
+	bg.SetMinSize(fyne.NewSize(60, 60))
+
+	label := canvas.NewText(text, color.White)
+	label.Alignment = fyne.TextAlignCenter
+	label.TextSize = 12
+
+	btnContent := container.NewStack(
+		bg,
+		container.NewCenter(label),
+	)
+	btn := widget.NewButton("", tapped)
+	btn.Importance = widget.LowImportance
+
+	return container.NewStack(
+		btn,
+		btnContent,
+	)
+}
+
+func circleWidget(size float32, avatar *canvas.Image) fyne.CanvasObject {
+	avatar.FillMode = canvas.ImageFillContain
+	avatar.SetMinSize(fyne.NewSize(size, size))
+
+	circle := canvas.NewCircle(color.Transparent)
+	circle.Resize(fyne.NewSize(size, size))
+
+	return container.NewStack(
+		circle,
+		avatar,
+	)
+}
+func Theme(bgColor color.Color, bgc color.Color, image string) ChatTheme {
+	return ChatTheme{
+		PanelColor:  bgColor,
+		ChatBgColor: bgc,
+		AvatarImage: image,
 	}
-	c := container.NewVBox(form)
-	f.SetContent(c)
-	f.Show()
+}
 
-	myWindow := myApp.NewWindow("Chat")
-	myWindow.Resize(fyne.NewSize(400, 400))
+var (
+	BlueTheme = Theme(
+		color.NRGBA{R: 173, G: 216, B: 230, A: 255}, // Панель
+		color.NRGBA{R: 240, G: 248, B: 255, A: 255}, // Фон чата
+		"images/blue.png", // Аватар
+	)
+	PinkTheme = Theme(
+		color.NRGBA{R: 255, G: 182, B: 193, A: 230},
+		color.NRGBA{R: 255, G: 240, B: 245, A: 128},
+		"images/pink.png",
+	)
+	GreenTheme = Theme(
+		color.NRGBA{R: 152, G: 251, B: 152, A: 230},
+		color.NRGBA{R: 152, G: 251, B: 152, A: 128},
+		"images/green.png",
+	)
+	YellowTheme = Theme(
+		color.NRGBA{R: 255, G: 255, B: 153, A: 230},
+		color.NRGBA{R: 255, G: 255, B: 153, A: 100},
+		"images/yellow.png",
+	)
+)
+
+func applyTheme(theme ChatTheme, panel *canvas.Rectangle, chatBg *canvas.Rectangle, avatar *canvas.Image) {
+	panel.FillColor = theme.PanelColor
+	chatBg.FillColor = theme.ChatBgColor
+	avatar.File = theme.AvatarImage
+	panel.Refresh()
+	chatBg.Refresh()
+	avatar.Refresh()
+}
+func createChatWindow(a fyne.App, name string) {
+	chatWindow := a.NewWindow("boring chat " + name)
+	chatWindow.Resize(fyne.NewSize(400, 400))
+
+	currentTheme := BlueTheme
+
+	panelBg := canvas.NewRectangle(currentTheme.PanelColor)
+	chatBg := canvas.NewRectangle(currentTheme.ChatBgColor)
+	avatar := canvas.NewImageFromFile(currentTheme.AvatarImage)
+
+	panel := container.NewStack(
+		panelBg,
+		container.NewVBox(
+			container.NewPadded(
+				circleWidget(60, avatar),
+			),
+			container.NewCenter(
+				func() *canvas.Text {
+					t := canvas.NewText("boringchat", color.White)
+					t.TextSize = 12
+					t.TextStyle = fyne.TextStyle{Bold: true}
+					return t
+				}(),
+			),
+			container.NewPadded(
+				roundedSquareButton("theme", color.NRGBA{R: 173, G: 216, B: 230, A: 230}, func() {
+					currentTheme = BlueTheme
+					applyTheme(currentTheme, panelBg, chatBg, avatar)
+				}),
+			),
+			container.NewPadded(
+				roundedSquareButton("theme", color.NRGBA{R: 255, G: 182, B: 193, A: 230}, func() {
+					currentTheme = PinkTheme
+					applyTheme(currentTheme, panelBg, chatBg, avatar)
+				}),
+			),
+			container.NewPadded(
+				roundedSquareButton("theme", color.NRGBA{R: 255, G: 255, B: 153, A: 230}, func() {
+					currentTheme = YellowTheme
+					applyTheme(currentTheme, panelBg, chatBg, avatar)
+				}),
+			),
+			container.NewPadded(
+				roundedSquareButton("theme", color.NRGBA{R: 152, G: 251, B: 152, A: 230}, func() {
+					currentTheme = GreenTheme
+					applyTheme(currentTheme, panelBg, chatBg, avatar)
+				}),
+			),
+		),
+	)
 
 	historyLabel := widget.NewLabel("")
 	historyLabel.Wrapping = fyne.TextWrapWord
@@ -45,7 +204,7 @@ func ui() {
 	scrollContainer.ScrollToBottom()
 
 	inputEntry := widget.NewEntry()
-	inputEntry.SetPlaceHolder("Введите сообщение")
+	inputEntry.SetPlaceHolder("Chatic omg bros")
 
 	update := widget.NewButton("Появились сообщения", func() {
 		mas, err := Writing()
@@ -64,20 +223,37 @@ func ui() {
 	})
 
 	inputEntry.OnSubmitted = func(text string) {
-		if UserName == "" {
-			UserName = "Anonymous"
-		}
 		if text == "" {
 			return
 		}
-		historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, UserName, text))
-		Writer(UserName, text)
+		historyLabel.SetText(fmt.Sprintf("%s%s: %s\n", historyLabel.Text, name, text))
+		Writer(name, text)
 		inputEntry.SetText("")
 		scrollContainer.ScrollToBottom()
 	}
+	inputContainer := container.NewBorder(
+		nil,
+		nil,
+		nil,
+		update,
+		inputEntry)
+	mainContent := container.NewBorder(
+		nil,
+		inputContainer,
+		nil,
+		nil,
+		scrollContainer)
 
-	inputContainer := container.NewBorder(nil, nil, nil, update, inputEntry)
-	content := container.NewBorder(scrollContainer, inputContainer, nil, nil)
-	myWindow.SetContent(content)
-	myWindow.ShowAndRun()
+	content := container.NewStack(
+		chatBg,
+		container.NewBorder(
+			nil, nil,
+			panel,
+			nil,
+			mainContent,
+		),
+	)
+
+	chatWindow.SetContent(content)
+	chatWindow.Show()
 }

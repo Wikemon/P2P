@@ -45,15 +45,13 @@ func Writing() ([]pair, error) {
 		fmt.Printf("%v\n", err)
 	}
 	messages := make([]pair, 0, 100000000)
-	//amount, err := bufio.NewReader(conn).ReadString('\n')
-	//fmt.Println(amount)
 	response, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
 	fmt.Println(string(response))
-	parts := strings.SplitN(string(response), " ", 4096)
+	parts := strings.SplitN(string(response), "|", 4096)
 	for i := 0; i < len(parts); i++ {
 		if parts[i] == "\n" {
 			break
@@ -61,9 +59,6 @@ func Writing() ([]pair, error) {
 		part := strings.SplitN(string(parts[i]), ":", 2)
 		messages = append(messages, pair{Name: part[0], Text: part[1]})
 	}
-	//if fmt.Sprintf("%v", len(messages)) != fmt.Sprintf("%v", string(amount)) {
-	//	return nil, fmt.Errorf("LOST OF INFO; TRY AGAIN")
-	//}
 	fmt.Println(messages)
 	return messages, nil
 }
