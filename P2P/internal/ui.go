@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"image/color"
 	"os"
+	"time"
 )
 
 var AllUsersNames map[string]struct{}
@@ -37,7 +38,7 @@ func Ui() {
 		if UserName == "Oleg" {
 			UserName = "silly guy"
 		}
-		IP = entryIP.Text
+		IP = fmt.Sprintf("%v:8080", entryIP.Text)
 		nameWindow.Close()
 		createChatWindow(myApp, UserName)
 	})
@@ -210,9 +211,9 @@ func createChatWindow(a fyne.App, name string) {
 	historyLabel := widget.NewLabel("")
 	historyLabel.Wrapping = fyne.TextWrapWord
 
-	scrollContainer := container.NewScroll(historyLabel)
-	scrollContainer.SetMinSize(fyne.NewSize(300, 360))
-	scrollContainer.ScrollToBottom()
+	//scrollContainer := container.NewScroll(historyLabel)
+	//scrollContainer.SetMinSize(fyne.NewSize(300, 360))
+	//scrollContainer.ScrollToBottom()
 
 	inputEntry := widget.NewEntry()
 	inputEntry.SetPlaceHolder("Сообщение")
@@ -223,24 +224,58 @@ func createChatWindow(a fyne.App, name string) {
 
 	var mas []Pair
 
-	update := widget.NewButton("Появились сообщения", func() {
-		mas, _, AllUsersNames = Writing()
-		if len(mas) == 0 {
-			return
-		} else {
-			historyLabel.SetText("")
-		}
-		for i := 0; i < len(mas); i++ {
-			historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, mas[i].Name, mas[i].Text))
-		}
-		AllUsers.SetText("All Users: ")
-		for u := range AllUsersNames {
-			if u == "" {
-				continue
+	go func() {
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				mas, _, AllUsersNames = Writing()
+				if len(mas) == 0 {
+					continue
+				} else {
+					historyLabel.SetText("")
+				}
+				for {
+					if len(mas) >= 14 {
+						mas = mas[13:]
+					} else {
+						break
+					}
+				}
+				for i := 0; i < len(mas); i++ {
+					historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, mas[i].Name, mas[i].Text))
+				}
+				AllUsers.SetText("All Users: ")
+				for u := range AllUsersNames {
+					if u == "" {
+						continue
+					}
+					AllUsers.SetText(fmt.Sprintf("%v%v ", AllUsers.Text, u))
+				}
 			}
-			AllUsers.SetText(fmt.Sprintf("%v%v ", AllUsers.Text, u))
 		}
-	})
+	}()
+
+	//update := widget.NewButton("Появились сообщения", func() {
+	//	mas, _, AllUsersNames = Writing()
+	//	if len(mas) == 0 {
+	//		return
+	//	} else {
+	//		historyLabel.SetText("")
+	//	}
+	//	for i := 0; i < len(mas); i++ {
+	//		historyLabel.SetText(fmt.Sprintf("%v%v: %v\n", historyLabel.Text, mas[i].Name, mas[i].Text))
+	//	}
+	//	AllUsers.SetText("All Users: ")
+	//	for u := range AllUsersNames {
+	//		if u == "" {
+	//			continue
+	//		}
+	//		AllUsers.SetText(fmt.Sprintf("%v%v ", AllUsers.Text, u))
+	//	}
+	//})
 
 	inputEntry.OnSubmitted = func(text string) {
 		var chars []string
@@ -265,13 +300,14 @@ func createChatWindow(a fyne.App, name string) {
 		historyLabel.SetText(fmt.Sprintf("%s%s: %s\n", historyLabel.Text, name, text))
 		Writer(name, text)
 		inputEntry.SetText("")
-		scrollContainer.ScrollToBottom()
+		//scrollContainer.ScrollToBottom()
 	}
+
 	inputContainer := container.NewBorder(
 		nil,
 		nil,
 		nil,
-		update,
+		nil,
 		inputEntry)
 
 	AllUsersContainer := container.NewHBox(
@@ -282,7 +318,7 @@ func createChatWindow(a fyne.App, name string) {
 		inputContainer,
 		nil,
 		nil,
-		scrollContainer)
+		historyLabel)
 
 	content := container.NewStack(
 		chatBg,

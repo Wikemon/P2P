@@ -46,6 +46,9 @@ func Writing() ([]Pair, error, map[string]struct{}) {
 		if len(part) != 2 {
 			continue
 		}
+		if part[0] == "" || part[1] == "" {
+			continue
+		}
 		messages = append(messages, Pair{Name: part[0], Text: part[1]})
 	}
 	allU := strings.SplitN(string(text[1]), "|", 4096)

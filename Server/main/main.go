@@ -16,6 +16,8 @@ func main() {
 	defer ln.Close()
 	fmt.Println("Сервер запущен на :8080")
 
+	internal.Messages = append(internal.Messages, internal.Message{Name: "", Text: ""})
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
